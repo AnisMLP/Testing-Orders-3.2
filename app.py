@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Google Sheets setup
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = '1maWDz6_g-9qOgTPwFvZsAmUPlO-d3P4J6U4JFUgkRE'
+SPREADSHEET_ID = '1wVlSsqccU15fxKeH4tGvOrKCGpc9UTO3lbt-uL8VCGo'
 SHEET_NAME = 'Orders 3.2'
 SECRET_KEY = os.getenv('SECRET_KEY', 'your_default_secret_key')
 GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')
@@ -85,17 +85,17 @@ def format_date(date_str):
         logger.error(f"Error formatting date {date_str}: {str(e)}")
         return "Invalid Date"
 
-def group_skus_by_vendor(line_items):
-    """Group SKUs and VINs by vendor from line items."""
-    sku_by_vendor = {}
+def group_skus_by_vendor_and_vin(line_items):
+    """Group SKUs by vendor and VIN from line items."""
+    sku_by_vendor_vin = {}
     for item in line_items:
         sku, vendor, vin = item.get('sku', 'Unknown SKU'), item.get('vendor', 'Unknown Vendor'), item.get('vin', '')
         key = (vendor, vin)  # Group by vendor and VIN
-        if key not in sku_by_vendor:
-            sku_by_vendor[key] = [sku]
+        if key not in sku_by_vendor_vin:
+            sku_by_vendor_vin[key] = [sku]
         else:
-            sku_by_vendor[key].append(sku)
-    return sku_by_vendor
+            sku_by_vendor_vin[key].append(sku)
+    return sku_by_vendor_vin
 
 def get_sheet_id():
     """Get the sheetId for the specified SHEET_NAME."""
@@ -177,10 +177,10 @@ def process_order(data):
             logger.warning(f"Order {order_number} has no line items, skipping Google Sheets write")
             return True
 
-        sku_by_vendor = group_skus_by_vendor(line_items)
+        sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
             [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", vin, "", ""]
-            for (vendor, vin), skus in sku_by_vendor.items()
+            for (vendor, vin), skus in sku_by_vendor_vin.items()
         ]
 
         start_row = get_last_row()
@@ -347,10 +347,10 @@ def add_backup_shipping_note(data):
         order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
         status = "TBC (No)" if order_total > 500 else ""
 
-        sku_by_vendor = group_skus_by_vendor(line_items)
+        sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
             [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", vin, backup_note, ""]
-            for (vendor, vin), skus in sku_by_vendor.items()
+            for (vendor, vin), skus in sku_by_vendor_vin.items()
         ]
 
         start_row = get_last_row()
