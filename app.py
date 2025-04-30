@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SPREADSHEET_ID = '1wVlSsqccU15fxKeH4tGvOrKCGpc9UTO3lbt-uL8VCGo'
 SHEET_NAME = 'Orders 3.2'
-SECRET_KEY = os.getenv('SECRET_KEY', 'your_default_secret_key')
+SECRET_KEY = os.getenv('SECRET_KEY', 'abc123')
 GOOGLE_CREDENTIALS = os.getenv('GOOGLE_CREDENTIALS')
 IS_RENDER = os.getenv('RENDER') == 'true'
 
@@ -179,7 +179,7 @@ def process_order(data):
 
         sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", vin, "", ""]
+            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if vin else "", "", ""]
             for (vendor, vin), skus in sku_by_vendor_vin.items()
         ]
 
@@ -235,6 +235,7 @@ def process_queue():
         else:
             logger.warning(f"Order {order_number} failed processing, keeping in queue")
             updated_queue.append(order)
+        time.sleep(1)  # Add delay to avoid Google API quota limits
 
     save_queue(updated_queue)
     logger.info(f"Queue processing complete. New queue size: {len(updated_queue)}")
@@ -349,7 +350,7 @@ def add_backup_shipping_note(data):
 
         sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", vin, backup_note, ""]
+            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if vin else "", backup_note, ""]
             for (vendor, vin), skus in sku_by_vendor_vin.items()
         ]
 
