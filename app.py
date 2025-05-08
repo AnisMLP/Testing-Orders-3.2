@@ -85,17 +85,20 @@ def format_date(date_str):
         logger.error(f"Error formatting date {date_str}: {str(e)}")
         return "Invalid Date"
 
-def group_skus_by_vendor_and_vin(line_items):
-    """Group SKUs by vendor and VIN from line items."""
-    sku_by_vendor_vin = {}
+def group_skus_by_vendor(line_items):
+    """Group SKUs by vendor from line items."""
+    sku_by_vendor = {}
+    has_vin_by_vendor = {}  # Track if any item for the vendor has a VIN
     for item in line_items:
         sku, vendor, vin = item.get('sku', 'Unknown SKU'), item.get('vendor', 'Unknown Vendor'), item.get('vin', '')
-        key = (vendor, vin)  # Group by vendor and VIN
-        if key not in sku_by_vendor_vin:
-            sku_by_vendor_vin[key] = [sku]
+        if vendor not in sku_by_vendor:
+            sku_by_vendor[vendor] = [sku]
+            has_vin_by_vendor[vendor] = bool(vin)
         else:
-            sku_by_vendor_vin[key].append(sku)
-    return sku_by_vendor_vin
+            sku_by_vendor[vendor].append(sku)
+            if vin:
+                has_vin_by_vendor[vendor] = True
+    return sku_by_vendor, has_vin_by_vendor
 
 def get_sheet_id():
     """Get the sheetId for the specified SHEET_NAME."""
@@ -188,10 +191,10 @@ def process_order(data):
             logger.warning(f"Order {order_number} has no line items, skipping Google Sheets write")
             return True
 
-        sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
+        sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
         rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if vin else "", "", ""]
-            for (vendor, vin), skus in sku_by_vendor_vin.items()
+            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", "", ""]
+            for vendor, skus in sku_by_vendor.items()
         ]
 
         start_row = get_last_row()
@@ -370,10 +373,10 @@ def add_backup_shipping_note(data):
         has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags_list)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
-        sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
+        sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
         rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if vin else "", backup_note, ""]
-            for (vendor, vin), skus in sku_by_vendor_vin.items()
+            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", backup_note, ""]
+            for vendor, skus in sku_by_vendor.items()
         ]
 
         start_row = get_last_row()
