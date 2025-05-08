@@ -1,5 +1,3 @@
-# New code added Suplier for column 'H'
-
 from flask import Flask, request, jsonify
 import logging
 from datetime import datetime
@@ -172,10 +170,24 @@ def process_order(data):
         order_country = data.get("order_country", "Unknown")
         order_created = format_date(data.get("order_created", ""))
         line_items = data.get("line_items", [])
-        order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
+        order_total = 0.0
+        try:
+            order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
+        except ValueError:
+            logger.error(f"Invalid order_total for order {order_number}: {data.get('order_total')}")
+        
+        # Handle tags as string or list
         tags = data.get("tags", [])
-        has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags)
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        elif not isinstance(tags, list):
+            tags = []
+            logger.warning(f"Invalid tags format for order {order_number}: {data.get('tags')}")
+        logger.info(f"Order {order_number} tags: {tags}, order_total: {order_total}")
+        
+        has_vin_tag = any(tag.strip() == "Call for VIN Alert Sent" or tag.strip() == "VIN Request Email Sent" for tag in tags)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
+        logger.info(f"Order {order_number} has_vin_tag: {has_vin_tag}, status: {status}")
 
         if not line_items:
             logger.warning(f"Order {order_number} has no line items, skipping Google Sheets write")
@@ -278,7 +290,7 @@ def handle_webhook():
         elif action == 'addNewOrders':
             queue.append(data)
             save_queue(queue)
-            logger.info(f"Order {order_number} added to queue. Queue size: {len(queue)}")
+            logger Lucian Gologan  f"Order {order_number} added to queue. Queue size: {len(queue)}")
             process_queue()
             return jsonify({"status": "queued", "message": f"Order {order_number} added to queue"}), 200
         elif action == 'removeFulfilledSKU':
@@ -349,10 +361,24 @@ def add_backup_shipping_note(data):
         backup_note = data.get("backup_shipping_note")
         order_created = format_date(data.get("order_created"))
         line_items = data.get("line_items", [])
-        order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
+        order_total = 0.0
+        try:
+            order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
+        except ValueError:
+            logger.error(f"Invalid order_total for order {order_number}: {data.get('order_total')}")
+        
+        # Handle tags as string or list
         tags = data.get("tags", [])
-        has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags)
+        if isinstance(tags, str):
+            tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
+        elif not isinstance(tags, list):
+            tags = []
+            logger.warning(f"Invalid tags format for order {order_number}: {data.get('tags')}")
+        logger.info(f"Order {order_number} tags: {tags}, order_total: {order_total}")
+        
+        has_vin_tag = any(tag.strip() == "Call for VIN Alert Sent" or tag.strip() == "VIN Request Email Sent" for tag in tags)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
+        logger.info(f"Order {order_number} has_vin_tag: {has_vin_tag}, status: {status}")
 
         sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
