@@ -117,19 +117,26 @@ def get_sheet_id():
         return None
 
 def get_last_row():
-    """Get the last row in the Sheet."""
+    """Get the last row in the Sheet, ensuring new rows are appended."""
     if not service:
         logger.error("Google Sheets service not initialized")
-        return 1
+        return 2  # Append at row 2 to preserve header
     try:
         result = service.spreadsheets().values().get(
             spreadsheetId=SPREADSHEET_ID, range=f'{SHEET_NAME}!A:N'
         ).execute()
         values = result.get('values', [])
-        return len(values) + 1 if values else 1
+        logger.info(f"get_last_row: Retrieved {len(values)} rows from {SHEET_NAME}!A:N")
+        if not values:
+            logger.info("Sheet is empty, appending at row 2 to preserve header")
+            return 2  # Append at row 2
+        return len(values) + 1  # Append after last row
+    except HttpError as e:
+        logger.error(f"HttpError getting last row: {str(e)}")
+        return 2  # Append at row 2 on error
     except Exception as e:
-        logger.error(f"Error getting last row: {str(e)}")
-        return 1
+        logger.error(f"Unexpected error getting last row: {str(e)}")
+        return 2  # Append at row 2 on error
 
 def update_sheet_with_retry(range_to_write, body, max_attempts=3, valueInputOption='RAW'):
     """Update Google Sheets with retry logic."""
@@ -197,7 +204,7 @@ def process_order(data):
             for vendor, skus in sku_by_vendor.items()
         ]
 
-        start_row = get_last_row()
+        start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
         range_to_write = f'{SHEET_NAME}!A{start_row}'
         body = {'values': rows_data}
         logger.info(f"Writing order {order_number} to Google Sheets at {range_to_write}")
@@ -379,9 +386,10 @@ def add_backup_shipping_note(data):
             for vendor, skus in sku_by_vendor.items()
         ]
 
-        start_row = get_last_row()
+        start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
         range_to_write = f'{SHEET_NAME}!A{start_row}:N{start_row + len(rows_data) - 1}'
         body = {'values': rows_data}
+        logger.info(f"Writing order {order_number} to Google Sheets at {range_to_write}")
         update_sheet_with_retry(range_to_write, body)
 
         apply_formulas()
