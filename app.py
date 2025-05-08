@@ -172,12 +172,10 @@ def process_order(data):
         line_items = data.get("line_items", [])
         order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
         
-        # Handle tags as string or list
-        tags = data.get("tags", [])
-        if isinstance(tags, str):
-            tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
-        
-        has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags)
+        # Handle tags as string
+        tags = data.get("tags", "")
+        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()] if isinstance(tags, str) else []
+        has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags_list)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         if not line_items:
@@ -354,12 +352,10 @@ def add_backup_shipping_note(data):
         line_items = data.get("line_items", [])
         order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
         
-        # Handle tags as string or list
-        tags = data.get("tags", [])
-        if isinstance(tags, str):
-            tags = [tag.strip() for tag in tags.split(",") if tag.strip()]
-        
-        has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags)
+        # Handle tags as string
+        tags = data.get("tags", "")
+        tags_list = [tag.strip() for tag in tags.split(",") if tag.strip()] if isinstance(tags, str) else []
+        has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags_list)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
