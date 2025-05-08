@@ -171,7 +171,9 @@ def process_order(data):
         order_created = format_date(data.get("order_created", ""))
         line_items = data.get("line_items", [])
         order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
-        status = "TBC (No)" if order_total > 500 else ""
+        tags = data.get("tags", [])
+        has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags)
+        status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         if not line_items:
             logger.warning(f"Order {order_number} has no line items, skipping Google Sheets write")
@@ -346,7 +348,9 @@ def add_backup_shipping_note(data):
         order_created = format_date(data.get("order_created"))
         line_items = data.get("line_items", [])
         order_total = float(data.get("order_total", "0")) if data.get("order_total") else 0.0
-        status = "TBC (No)" if order_total > 500 else ""
+        tags = data.get("tags", [])
+        has_vin_tag = any(tag in ["Call for VIN Alert Sent", "VIN Request Email Sent"] for tag in tags)
+        status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         sku_by_vendor_vin = group_skus_by_vendor_and_vin(line_items)
         rows_data = [
