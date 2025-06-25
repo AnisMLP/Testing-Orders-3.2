@@ -194,15 +194,37 @@ def process_order(data):
         has_vin_tag = any(tag == "Call for VIN Alert Sent" or tag == "VIN Request Email Sent" for tag in tags_list)
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
+        sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
+
         if not line_items:
             logger.warning(f"Order {order_number} has no line items, skipping Google Sheets write")
             return True
 
         sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
-        rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", "", ""]
-            for vendor, skus in sku_by_vendor.items()
-        ]
+        rows_data = []
+        for vendor, skus in sku_by_vendor.items():
+            vendor_items = [item for item in line_items if item.get('vendor') == vendor]
+            this_status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
+
+            incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
+            available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
+
+            if incoming:
+                this_status = "Incoming"
+            elif available_zero:
+                this_status = "In Stock"
+
+            rows_data.append([
+                order_created,
+                order_number,
+                order_id,
+                ', '.join(skus),
+                vendor,
+                order_country,
+                "", "", "", this_status,
+                "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
+                "", ""
+            ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
         range_to_write = f'{SHEET_NAME}!A{start_row}'
@@ -381,10 +403,30 @@ def add_backup_shipping_note(data):
         status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
         sku_by_vendor, has_vin_by_vendor = group_skus_by_vendor(line_items)
-        rows_data = [
-            [order_created, order_number, order_id, ', '.join(skus), vendor, order_country, "", "", "", status, "", "Please Check VIN" if has_vin_by_vendor[vendor] else "", backup_note, ""]
-            for vendor, skus in sku_by_vendor.items()
-        ]
+        rows_data = []
+        for vendor, skus in sku_by_vendor.items():
+            vendor_items = [item for item in line_items if item.get('vendor') == vendor]
+            this_status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
+
+            incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
+            available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
+
+            if incoming:
+                this_status = "Incoming"
+            elif available_zero:
+                this_status = "In Stock"
+
+            rows_data.append([
+                order_created,
+                order_number,
+                order_id,
+                ', '.join(skus),
+                vendor,
+                order_country,
+                "", "", "", this_status,
+                "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
+                "", ""
+            ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
         range_to_write = f'{SHEET_NAME}!A{start_row}:N{start_row + len(rows_data) - 1}'
