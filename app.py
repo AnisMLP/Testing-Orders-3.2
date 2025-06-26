@@ -1,3 +1,4 @@
+# 26 June: Add instock and In-coming
 from flask import Flask, request, jsonify
 import logging
 from datetime import datetime
@@ -209,10 +210,13 @@ def process_order(data):
             incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
             available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
 
-            if incoming:
-                this_status = "Incoming"
-            elif available_zero:
-                this_status = "In Stock"
+            sku_messages = []
+            for item in vendor_items:
+                sku = item.get('sku')
+                if int(item.get('incoming', 0)) > 0:
+                    sku_messages.append(f"Notice: 📦 Incoming stock on the way for {sku}")
+                elif int(item.get('available', 0)) > 0:
+                    sku_messages.append(f"Notice: 📦 In stock for {sku}")
 
             rows_data.append([
                 order_created,
@@ -221,9 +225,9 @@ def process_order(data):
                 ', '.join(skus),
                 vendor,
                 order_country,
-                "", "", "", this_status,
+                "", "", "", "",  # Removed this_status from Column J
                 "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
-                "", ""
+                "", "\n".join(sku_messages)  # Added to Column M
             ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
@@ -411,10 +415,13 @@ def add_backup_shipping_note(data):
             incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
             available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
 
-            if incoming:
-                this_status = "Incoming"
-            elif available_zero:
-                this_status = "In Stock"
+            sku_messages = []
+            for item in vendor_items:
+                sku = item.get('sku')
+                if int(item.get('incoming', 0)) > 0:
+                    sku_messages.append(f"Notice: 📦 Incoming stock on the way for {sku}")
+                elif int(item.get('available', 0)) > 0:
+                    sku_messages.append(f"Notice: 📦 In stock for {sku}")
 
             rows_data.append([
                 order_created,
@@ -423,9 +430,9 @@ def add_backup_shipping_note(data):
                 ', '.join(skus),
                 vendor,
                 order_country,
-                "", "", "", this_status,
+                "", "", "", "", 
                 "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
-                "", ""
+                "", "\n".join(sku_messages)
             ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
