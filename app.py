@@ -205,11 +205,11 @@ def process_order(data):
         rows_data = []
         for vendor, skus in sku_by_vendor.items():
             vendor_items = [item for item in line_items if item.get('vendor') == vendor]
+
+            # Column J logic: Keep TBC (No) if applicable
             this_status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
-            incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
-            available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
-
+            # Column M logic: Detailed per-SKU messages
             sku_messages = []
             for item in vendor_items:
                 sku = item.get('sku')
@@ -225,9 +225,9 @@ def process_order(data):
                 ', '.join(skus),
                 vendor,
                 order_country,
-                "", "", "", "",  # Removed this_status from Column J
+                "", "", "", this_status,  # Column J still gets TBC (No)
                 "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
-                "", "\n".join(sku_messages)  # Added to Column M
+                "", "\n".join(sku_messages)  # Column M now gets incoming/instock text
             ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
@@ -410,11 +410,11 @@ def add_backup_shipping_note(data):
         rows_data = []
         for vendor, skus in sku_by_vendor.items():
             vendor_items = [item for item in line_items if item.get('vendor') == vendor]
+
+            # Column J logic: Keep TBC (No) if applicable
             this_status = "TBC (No)" if order_total > 500 and has_vin_tag else ""
 
-            incoming = any(int(item.get('incoming', 0)) > 0 for item in vendor_items)
-            available_zero = all(int(item.get('available', 0)) == 0 for item in vendor_items)
-
+            # Column M logic: Detailed per-SKU messages
             sku_messages = []
             for item in vendor_items:
                 sku = item.get('sku')
@@ -430,9 +430,9 @@ def add_backup_shipping_note(data):
                 ', '.join(skus),
                 vendor,
                 order_country,
-                "", "", "", "", 
+                "", "", "", this_status,  # Column J still gets TBC (No)
                 "", "Please Check VIN" if has_vin_by_vendor[vendor] else "",
-                "", "\n".join(sku_messages)
+                "", "\n".join(sku_messages)  # Column M now gets incoming/instock text
             ])
 
         start_row = max(2, get_last_row())  # Ensure we append and don't overwrite header
